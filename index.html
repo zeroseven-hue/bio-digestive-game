@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>人體消化大冒險 - The Digestive Track Challenge</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --dark: #2c3e50;
+            --bg-c: #f5f6fa;
+        }
+
+        * { box-sizing: border-box; touch-action: manipulation; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+            background: var(--bg-c); margin: 0; padding: 0;
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; overflow: hidden;
+            -webkit-user-select: none; user-select: none;
+        }
+
+        /* 頂端狀態列 */
+        .header-bar {
+            width: 100%; max-width: 520px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 12px; background: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06); z-index: 100;
+        }
+        .header-bar .title { font-weight: bold; color: var(--dark); font-size: 15px; }
+        .sound-btn {
+            background: #f1f2f6; border: 1px solid #dcdde1; border-radius: 16px;
+            padding: 4px 10px; font-size: 13px; cursor: pointer;
+        }
+
+        /* 首頁設定介面 */
+        #setup-screen {
+            position: fixed; inset: 0; background: var(--bg-c);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000; padding: 15px; overflow-y: auto;
+        }
+        .card {
+            background: white; border-radius: 20px; padding: 22px;
+            width: 100%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+        .card h2 { margin-top: 0; color: var(--dark); text-align: center; font-size: 22px; }
+        .form-group { margin-bottom: 12px; text-align: left; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        .form-control {
+            width: 100%; padding: 10px; border: 1.5px solid #dcdde1;
+            border-radius: 8px; font-size: 15px;
+        }
+        .mode-selector { display: flex; gap: 8px; margin-bottom: 10px; }
+        .mode-btn {
+            flex: 1; padding: 10px; border: 2px solid #dcdde1; background: #fff;
+            border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 14px;
+        }
+        .mode-btn.active { border-color: var(--primary); background: #ebf5fb; color: var(--primary); }
+
+        /* 遊戲主介面 */
+        #game-screen {
+            display: none; width: 100%; height: 100vh;
+            flex-direction: column; align-items: center;
+        }
+        .dashboard {
+            width: 100%; max-width: 520px; display: flex;
+            gap: 6px; padding: 5px 8px; overflow-x: auto;
+        }
+        .p-badge {
+            background: white; border-radius: 10px; padding: 5px 8px;
+            font-size: 12px; font-weight: bold; border-left: 5px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex: 1; min-width: 85px;
+        }
+        .p-badge.active { border-color: var(--warning); background: #fffdf5; transform: scale(1.02); }
+
+        /* 地圖畫布容器：精確綁定第二張圖 */
+        .board-container {
+            flex: 1; width: 100%; max-width: 520px;
+            position: relative; display: flex; justify-content: center; align-items: center;
+            overflow: hidden; padding: 2px 0;
+        }
+        #game-map {
+            height: 100%; max-height: 800px; aspect-ratio: 1021 / 2048;
+            background-image: url('map.jpg');
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            position: relative; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+        }
+
+        /* 棋子樣式 */
+        .token {
+            position: absolute; width: 28px; height: 28px;
+            border-radius: 50%; border: 2px solid white;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 16px; font-weight: bold; color: white;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+            transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+            transform: translate(-50%, -50%); z-index: 50;
+        }
+
+        /* 底部操作條 */
+        .bottom-bar {
+            width: 100%; max-width: 520px; background: white;
+            padding: 8px 15px; display: flex; justify-content: space-between;
+            align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        .roll-btn {
+            background: var(--success); color: white; border: none;
+            padding: 10px 22px; font-size: 16px; font-weight: bold;
+            border-radius: 20px; cursor: pointer; box-shadow: 0 3px 0 #27ae60;
+        }
+        .roll-btn:active { transform: translateY(2px); box-shadow: none; }
+        .turn-text { font-size: 14px; font-weight: bold; color: var(--dark); }
+
+        /* 彈窗樣式 */
+        .modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+            display: none; justify-content: center; align-items: center;
+            z-index: 2000; padding: 18px;
+        }
+        .modal-box {
+            background: white; border-radius: 18px; padding: 20px;
+            width: 100%; max-width: 400px; text-align: center;
+            max-height: 90vh; overflow-y: auto;
+        }
+        .timer-bar {
+            background: #ffebee; color: var(--danger); font-weight: bold;
+            padding: 5px; border-radius: 8px; margin-bottom: 10px; font-size: 13px;
+        }
+        .opt-list { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+        .opt-btn {
+            padding: 11px 14px; font-size: 14px; font-weight: bold;
+            border: 2px solid #e0e0e0; border-radius: 10px; background: #fafafa;
+            cursor: pointer; text-align: left; transition: 0.15s; line-height: 1.4;
+        }
+        .opt-btn:active { background: #ebf5fb; border-color: var(--primary); }
+
+        /* Classroom 結算截圖證書卡 */
+        .certificate-card {
+            background: #ffffff; border: 3px solid var(--success);
+            border-radius: 16px; padding: 18px; text-align: center;
+        }
+        .cert-code {
+            display: inline-block; background: #e8f8f5; border: 1.5px dashed #1abc9c;
+            color: #16a085; padding: 6px 14px; font-family: monospace;
+            font-size: 18px; font-weight: bold; border-radius: 6px; margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <div class="title">🏃 人體消化大冒險 (54格完備版)</div>
+        <button id="sound-toggle" class="sound-btn" onclick="toggleSound()">🔇 靜音中</button>
+    </div>
+
+    <!-- 首頁設定介面 -->
+    <div id="setup-screen">
+        <div class="card">
+            <h2>消化大富翁</h2>
+            <div class="form-group">
+                <label>選擇遊玩型態：</label>
+                <div class="mode-selector">
+                    <button class="mode-btn active" id="mode-single" onclick="setMode('single')">👤 個人獨立闖關</button>
+                    <button class="mode-btn" id="mode-team" onclick="setMode('team')">👥 小組同機競賽</button>
+                </div>
+            </div>
+
+            <div id="single-fields">
+                <div class="form-group">
+                    <label>班級 / 座號：</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="p-class" class="form-control" placeholder="如 701" value="701">
+                        <input type="number" id="p-seat" class="form-control" placeholder="座號" value="1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>姓名：</label>
+                    <input type="text" id="p-name" class="form-control" placeholder="請輸入姓名" value="小明">
+                </div>
+            </div>
+
+            <div id="team-fields" style="display: none;">
+                <div class="form-group">
+                    <label>參賽組數：</label>
+                    <select id="team-count" class="form-control" onchange="generateTeamInputs()">
+                        <option value="2">2 組對抗</option>
+                        <option value="3">3 組競賽</option>
+                        <option value="4" selected>4 組大戰</option>
+                    </select>
+                </div>
+                <div id="team-inputs"></div>
+            </div>
+
+            <button class="roll-btn" style="width: 100%; margin-top: 15px;" onclick="startGame()">🚀 正式出發！</button>
+        </div>
+    </div>
+
+    <!-- 遊戲主畫面 -->
+    <div id="game-screen">
+        <div class="dashboard" id="dashboard"></div>
+        <div class="board-container">
+            <div id="game-map">
+                <div id="tokens-layer"></div>
+            </div>
+        </div>
+
+        <div class="bottom-bar">
+            <div class="turn-text" id="turn-display">輪到：玩家</div>
+            <button class="roll-btn" id="main-roll-btn" onclick="triggerDice()">🎲 擲骰前進</button>
+        </div>
+    </div>
+
+    <!-- 任務與彈窗 -->
+    <div class="modal" id="game-modal">
+        <div class="modal-box">
+            <div class="timer-bar" id="m-timer">⏳ 思考剩餘：20 秒</div>
+            <h3 id="m-title" style="margin-top:0; color:var(--dark);">任務關卡</h3>
+            <div id="m-content" style="font-size: 15px; line-height: 1.5; margin-bottom: 10px;"></div>
+            <div class="opt-list" id="m-opts"></div>
+            <div id="m-explanation" style="display:none; text-align:left; background:#fff3cd; padding:10px; border-radius:8px; font-size:13px; margin-top:8px; color:#856404;"></div>
+            <button class="roll-btn" id="m-ok-btn" style="width:100%; display:none; margin-top:10px;" onclick="closeModal()">確定</button>
+        </div>
+    </div>
+
+    <script>
+        /* --- 54 格中心精確座標 (百分比錨定於 map.jpg) --- */
+        const posMap = {
+            1: {x: 23.5, y: 7.5},  2: {x: 34.0, y: 7.5},  3: {x: 45.5, y: 7.5},
+            4: {x: 57.0, y: 7.5},  5: {x: 57.0, y: 12.5}, 6: {x: 57.0, y: 17.5}, 7: {x: 57.0, y: 22.5}, 8: {x: 57.0, y: 27.5},
+            9: {x: 71.0, y: 27.5}, 10: {x: 71.0, y: 32.5}, 11: {x: 71.0, y: 37.5}, 12: {x: 58.5, y: 37.5}, 13: {x: 47.0, y: 37.5}, 14: {x: 35.0, y: 37.5},
+            15: {x: 35.0, y: 44.5}, 16: {x: 35.0, y: 47.8}, 17: {x: 35.0, y: 53.0}, 18: {x: 46.0, y: 53.0}, 19: {x: 56.5, y: 53.0}, 20: {x: 67.0, y: 53.0},
+            21: {x: 67.0, y: 60.5}, 22: {x: 56.5, y: 60.5}, 23: {x: 46.0, y: 60.5}, 24: {x: 35.0, y: 60.5}, 25: {x: 35.0, y: 65.5}, 26: {x: 46.0, y: 65.5},
+            27: {x: 46.0, y: 70.5}, 28: {x: 56.5, y: 70.5}, 29: {x: 67.0, y: 70.5}, 30: {x: 67.0, y: 75.5}, 31: {x: 67.0, y: 80.5}, 32: {x: 56.5, y: 80.5},
+            33: {x: 46.0, y: 80.5}, 34: {x: 32.0, y: 80.5}, 35: {x: 20.0, y: 80.5}, 36: {x: 20.0, y: 74.5}, 37: {x: 20.0, y: 68.0}, 38: {x: 20.0, y: 61.5},
+            39: {x: 20.0, y: 55.5}, 40: {x: 20.0, y: 50.0}, 41: {x: 20.0, y: 44.5}, 42: {x: 46.0, y: 44.5}, 43: {x: 57.0, y: 44.5}, 44: {x: 70.5, y: 44.5},
+            45: {x: 81.5, y: 44.5}, 46: {x: 81.5, y: 51.5}, 47: {x: 81.5, y: 56.5}, 48: {x: 81.5, y: 62.5}, 49: {x: 81.5, y: 70.0}, 50: {x: 81.5, y: 75.5},
+            51: {x: 81.5, y: 81.5}, 52: {x: 81.5, y: 87.5}, 53: {x: 71.5, y: 87.5}, 54: {x: 61.5, y: 87.5}
+        };
+
+        /* 終點結算點 (順著排遺箭頭) */
+        const endPos = {x: 49.0, y: 94.0};
+
+        /* --- 特殊圖形格定義 (與圖案完全吻合) --- */
+        const specialCells = {
+            2:  { type: "event", title: "🦷 牙齒舌頭物理消化", desc: "牙齒咬碎食物並由舌頭攪拌，表面積大增！前進 1 格並獲得 10 ATP。", pts: 10, step: 1 },
+            6:  { type: "event", title: "🎢 食道平滑滑道", desc: "食道肌肉收縮蠕動推進，順暢無比！直接滑動至第 8 格。", pts: 10, targetPos: 8 },
+            17: { type: "event", title: "💧 肝膽相照 (膽汁注入)", desc: "膽汁注入乳化脂質成小球！消化大助攻，獲得額外擲骰 1 次！", pts: 15, extraRoll: true },
+            23: { type: "event", title: "🌿 小腸微絨毛大展開", desc: "無數微絨毛展開，大幅拓展吸收表面積！吸收加倍，獲得 20 ATP！", pts: 20 },
+            27: { type: "event", title: "🍚 養分小分子形成", desc: "澱粉完全轉為葡萄糖，順利吸收！獲得 20 ATP。", pts: 20 },
+            28: { type: "event", title: "🥩 胺基酸完全吸收", desc: "蛋白質分解為胺基酸穿透細胞膜！獲得 20 ATP。", pts: 20 },
+            29: { type: "event", title: "🧈 脂肪酸吸收完畢", desc: "脂質完全分解為脂肪酸與甘油吸收！獲得 20 ATP。", pts: 20 },
+            41: { type: "event", title: "⏰ 大腸緩慢長征", desc: "食物殘渣在大腸移動極慢，在此暫停休息 1 回合。", pts: 0, pause: true },
+            42: { type: "event", title: "🦠 益生共生菌發威", desc: "大腸共生菌協助製造維生素 B、K！獲得 15 ATP。", pts: 15 },
+            53: { type: "event", title: "💧 大腸吸收剩餘水分", desc: "大腸回收最後的水分，糞便成形！獲得 10 ATP。", pts: 10 },
+            54: { type: "event", title: "💩 直腸便意來襲", desc: "糞便刺激直腸神經產生便意，準備排遺完賽！", pts: 10 }
+        };
+
+        /* --- 題庫與隨機抽題池 --- */
+        let activeQuestionBank = [];
+        let usedQuestions = new Set();
+        let consecutiveFails = 0;
+
+        // 完整 36 題全備份（兼顧跨域與本地 file:// 雙擊直接開啟）
+        const fallbackFullQuestions = [
+            {"id":"oral_01","organ":"oral","diff":"易","q":"人體的口腔具有哪些功能？(甲)分解醣類 (乙)分解蛋白質 (丙)咬碎食物 (丁)潤滑食物","opts":["甲、丙、丁","甲、乙、丁","丙、丁、戊","甲、丁、戊"],"ans":0,"exp":"牙齒咬碎食物(丙)，唾腺分泌唾液潤滑(丁)，唾液中的澱粉酶初步分解醣類(甲)。蛋白質要到胃才開始分解。"},
+            {"id":"oral_02","organ":"oral","diff":"易","q":"吃飯時如果把米飯咀嚼得較久會感覺有甜味，主要原因為何？","opts":["唾液中的酵素使澱粉分解為麥芽糖","米飯本來就含有大量葡萄糖","純粹是心理作用","口中唾液自帶甜味"],"ans":0,"exp":"唾液含有唾液澱粉酶，可將食物中的澱粉初步分解為具有甜味的麥芽糖。"},
+            {"id":"oral_03","organ":"oral","diff":"易","q":"食物在人體消化系統中，最先開始進行『化學性消化分解』的養分是什麼？","opts":["醣類（澱粉）","蛋白質","脂質","礦物質"],"ans":0,"exp":"澱粉在口腔就由唾液澱粉酶展開化學性分解，是三大營養素中最早開始被分解的。"},
+            {"id":"oral_04","organ":"oral","diff":"易","q":"原住民釀造小米酒古法：將小米蒸熟後在口中咀嚼再密封釀造。其科學原理為何？","opts":["唾液內的酵素使澱粉初步分解","唾液中的細菌促使酒精發酵","唾液內的酵素使葡萄糖分解","唾液酵素能殺菌防腐"],"ans":0,"exp":"口腔唾液中的澱粉酶能將澱粉分解成糖類，以利後續酵母菌發酵產生酒精。"},
+            {"id":"oral_05","organ":"oral","diff":"中","q":"食物在口腔中與唾液充分混合後，其環境的酸鹼性通常呈現何種狀態？","opts":["中性","強酸性","強鹼性","弱鹼性"],"ans":0,"exp":"人體口腔分泌的唾液通常呈現中性（pH 6.5～7.5）。"},
+            {"id":"oral_06","organ":"oral","diff":"中","q":"若某人唾液中缺乏分解澱粉的酵素，對其消化吸收有何主要影響？","opts":["澱粉在口腔不分解，但仍可在小腸被分解吸收","澱粉完全無法在體內被消化","小腸將無法吸收葡萄糖","胃液會代為分解澱粉"],"ans":0,"exp":"小腸內的胰液與腸液皆含有消化醣類的酵素，澱粉仍可在小腸完全分解成葡萄糖被吸收。"},
+            {"id":"oral_07","organ":"oral","diff":"易","q":"【基礎】人體的舌頭除了能攪拌食物外，還能協助將食物與何種消化液混合使之入喉？","opts":["唾液","胃液","膽汁","胰液"],"ans":0,"exp":"舌頭能協助攪拌食物，並使食物與唾腺分泌的唾液充分混合成食糰以利吞嚥。"},
+            {"id":"esoph_01","organ":"esoph","diff":"易","q":"為什麼太空人在無重力環境下即使倒立吃喝，仍能順利將食物送入胃裡？","opts":["靠食道管壁肌肉收縮蠕動","靠胃部肌肉強烈吸引","靠食道內壁纖毛擺動","靠重力自然下墜"],"ans":0,"exp":"消化管壁皆有肌肉，食道藉由肌肉規律收縮產生『蠕動』，可克服重力推送食物前進。"},
+            {"id":"esoph_02","organ":"esoph","diff":"中","q":"下列關於『食道』的生理特性，哪一項敘述是完全正確的？","opts":["食道沒有消化腺，不分泌消化液，不具消化分解功能","食道可分泌微酸性液體分解蛋白質","食道是人體吸收水分的主要場所","食道藉由氣泡破裂推進食物"],"ans":0,"exp":"食道是純粹推送食物的通道，不分泌消化液，不能將大分子養分轉變為小分子。"},
+            {"id":"esoph_03","organ":"esoph","diff":"中","q":"消化道管壁肌肉不斷收縮產生的局部蠕動運動，其功能『不包括』下列何者？","opts":["吸收多餘的二氧化碳","推動食物前進","磨碎食物","將食物與消化液混合"],"ans":0,"exp":"消化道蠕動的功能包含推動食物、磨碎食物與混合消化液，不負責氣體吸收。"},
+            {"id":"esoph_04","organ":"esoph","diff":"易","q":"【基礎】消化管壁推動食物前進的蠕動運動，是由下列哪一種組織的收縮所產生的？","opts":["肌肉組織","皮膜組織","神經組織","結締組織"],"ans":0,"exp":"消化道管壁布滿肌肉組織，藉由肌肉規律收縮產生蠕動推進食物。"},
+            {"id":"stomach_01","organ":"stomach","diff":"易","q":"小芸吃完晚餐後胃部飽脹，想起胃能消化肉類。請問與胃部的消化功能最相關的是？","opts":["胃蛋白酶在酸性中分解蛋白質","胃液中的酵素能分解澱粉","胃液能中和腸液","胃能直接大量吸收葡萄糖"],"ans":0,"exp":"胃壁內的胃腺分泌胃液，其中的胃蛋白酶專司在酸性環境中初步分解蛋白質。"},
+            {"id":"stomach_02","organ":"stomach","diff":"中","q":"胃液中含有強酸性的『鹽酸』，請問鹽酸的主要功能包括哪些？(甲)防止食物腐敗 (乙)促使酵素活動 (丙)直接分解脂質","opts":["甲、乙","乙、丙","甲、丙","甲、乙、丙"],"ans":0,"exp":"鹽酸能殺菌防腐(甲)，並提供酸性環境促使胃蛋白酶分解蛋白質(乙)；鹽酸不能直接分解脂質。"},
+            {"id":"stomach_03","organ":"stomach","diff":"中","q":"醫生開藥給病人並告知此藥會減少胃液分泌，則病人服用後哪類食物的分解最受影響？","opts":["蛋白質類（如茶葉蛋、牛肉）","澱粉類（如白飯）","脂肪類（如奶油）","纖維素類（如菠菜）"],"ans":0,"exp":"胃液主要負責初步分解蛋白質，胃液分泌減少會直接影響蛋白質類食物的分解。"},
+            {"id":"stomach_04","organ":"stomach","diff":"中","q":"關於『胃』的構造與生理敘述，下列何者正確？","opts":["胃呈囊狀，可暫時儲存食物","胃位於人體右上腹部","胃液呈現微弱鹼性","胃液含有分解澱粉的酵素"],"ans":0,"exp":"胃呈囊狀可暫時貯存食物；胃位於人體左上腹部，分泌強酸性胃液，主要分解蛋白質。"},
+            {"id":"stomach_05","organ":"stomach","diff":"難","q":"在人體消化過程中，能在『酸性』與『鹼性』環境中均能被酵素分解的營養素為何？","opts":["蛋白質","脂質","澱粉","礦物質"],"ans":0,"exp":"蛋白質可在胃（強酸）被胃蛋白酶分解，亦可在小腸（微鹼性）被胰液與腸液分解。"},
+            {"id":"stomach_06","organ":"stomach","diff":"難","q":"在養分分解曲線中，有一種營養素在口腔完全不分解，進入胃才開始大量分解，此養分是？","opts":["蛋白質","澱粉","脂質","纖維素"],"ans":0,"exp":"蛋白質在口腔不被消化，直到進入胃才由胃蛋白酶開始初步分解。"},
+            {"id":"stomach_07","organ":"stomach","diff":"易","q":"【基礎】胃壁內面能分泌何種物質以保護自己，避免胃壁組織被胃酸與酵素侵蝕？","opts":["黏液","膽汁","胰液","唾液"],"ans":0,"exp":"胃壁黏膜能分泌黏液覆蓋表面，形成保護層防止胃壁被強酸及胃蛋白酶消化腐蝕。"},
+            {"id":"si_01","organ":"si","diff":"中","q":"膽汁是由何處製造？何處儲存？又在何處發揮其消化功能？","opts":["肝臟製造、膽囊儲存、小腸發揮","膽囊製造、肝臟儲存、小腸發揮","肝臟製造、小腸儲存、大腸發揮","胰臟製造、膽囊儲存、胃發揮"],"ans":0,"exp":"人體最大消化腺肝臟製造膽汁，暫存於膽囊中，經導管注入小腸前段發揮功能。"},
+            {"id":"si_02","organ":"si","diff":"難","q":"下列關於『膽汁』特性的敘述，哪一項是完全正確的？","opts":["膽汁不含任何消化酵素，主要將脂質乳化成小油球","膽汁含有強效酵素能將脂質分解成脂肪酸","膽汁呈現強酸性以助胃酸殺菌","膽汁由膽囊細胞製造分泌"],"ans":0,"exp":"膽汁不含消化酵素，功能為乳化脂質成脂肪小球以增加接觸表面積；由肝臟分泌。"},
+            {"id":"si_03","organ":"si","diff":"中","q":"胖虎患膽結石將膽囊切除，醫生建議少吃高油脂食物，主要原因為何？","opts":["缺少膽囊濃縮儲存膽汁，脂質乳化變差導致消化不良","肝臟將永遠停止製造膽汁","脂質將完全無法被腸道吸收","油脂會直接腐蝕胃壁"],"ans":0,"exp":"切除膽囊後膽汁無法濃縮儲存，流入腸道的膽汁較稀薄，影響脂質的乳化與消化效果。"},
+            {"id":"si_04","organ":"si","diff":"中","q":"人體的小腸前段，同時匯聚了哪三種消化液在此共同發揮消化作用？","opts":["膽汁、胰液、腸液","唾液、胃液、膽汁","胃液、胰液、腸液","膽汁、胃液、唾液"],"ans":0,"exp":"膽汁與胰液經由導管注入小腸，配合小腸壁分泌的腸液，三者在小腸共同作用。"},
+            {"id":"si_05","organ":"si","diff":"中","q":"人體哪一個器官分泌的消化液，能同時分解『醣類、蛋白質、脂質』三大營養素？","opts":["胰臟（胰液）","肝臟（膽汁）","胃（胃液）","唾腺（唾液）"],"ans":0,"exp":"胰臟分泌的胰液為全能消化液，含有分解醣類、蛋白質與脂質的完整酵素群。"},
+            {"id":"si_06","organ":"si","diff":"易","q":"小腸內壁具有許多皺褶與『絨毛』構造，其最主要的生理功能為何？","opts":["大幅增加吸收養分與水分的表面積","增加食物儲存空間","加速腸道肌肉劇烈收縮","分泌高濃度鹽酸"],"ans":0,"exp":"小腸內壁絨毛大幅增加了吸收面積，利於小分子養分與水分迅速被微血管吸收。"},
+            {"id":"si_07","organ":"si","diff":"難","q":"人體日常攝入的大部分水分，主要是在消化系統的哪一個器官被吸收？","opts":["小腸","大腸","胃","食道"],"ans":0,"exp":"高頻常錯題！小腸吸收了人體絕大部分的水分與營養素，大腸只吸收剩餘水分。"},
+            {"id":"si_08","organ":"si","diff":"中","q":"減肥藥『羅氏鮮』能阻止食物中三分之一油脂被分解吸收，其作用位置在何處？","opts":["小腸","胃","食道","大腸"],"ans":0,"exp":"脂質的消化與吸收主要是在小腸進行，故阻止油脂分解吸收的藥物作用在小腸。"},
+            {"id":"si_09","organ":"si","diff":"易","q":"醣類、蛋白質、脂質三大養分經消化分解後，最終分別轉變為何種可吸收的小分子？","opts":["葡萄糖、胺基酸、脂肪酸與甘油","葡萄糖、脂肪酸、胺基酸","脂肪酸、葡萄糖、胺基酸","麥芽糖、蛋白質、脂質"],"ans":0,"exp":"最終消化小分子：醣類變葡萄糖、蛋白質變胺基酸、脂質變脂肪酸與甘油。"},
+            {"id":"si_10","organ":"si","diff":"難","q":"若病患因腸胃炎整天未進食，醫生為其注射葡萄糖液補充體力，主要考量為何？","opts":["葡萄糖是單醣小分子，細胞可直接吸收利用","葡萄糖需要經胃液酵素活化","葡萄糖能直接轉換成消化液","可防止絨毛萎縮"],"ans":0,"exp":"葡萄糖為小分子養分，不需經消化分解即可直接穿透細胞膜被吸收利用。"},
+            {"id":"si_11","organ":"si","diff":"中","q":"小芸喝鮮奶容易腹瀉，改喝不含乳糖的優酪乳後則無不適，主要是因為她體內缺乏何種酵素？","opts":["乳糖酶","胃蛋白酶","唾液澱粉酶","脂酶"],"ans":0,"exp":"乳糖不耐症是因小腸黏膜缺乏分解乳糖的乳糖酶，導致乳糖未被吸收進入大腸引起不適。"},
+            {"id":"si_12","organ":"si","diff":"易","q":"【基礎】人體兼具『消化道』身分且管壁內具有『消化腺』的器官是哪一個？","opts":["小腸","肝臟","胰臟","大腸"],"ans":0,"exp":"小腸是食物通過的消化管，且腸壁內含有分泌腸液的腸腺；肝臟與胰臟不屬於消化道。"},
+            {"id":"li_01","organ":"li","diff":"易","q":"關於『大腸』的敘述，下列何者正確？","opts":["為消化道，主要吸收食物殘渣中剩餘水分","具有發達的絨毛以增加養分吸收","能分泌酵素分解食物纖維素","是主要化學分解養分的大本營"],"ans":0,"exp":"大腸是消化道的一環，無消化腺、無絨毛，主要吸收剩餘水分並形成糞便。"},
+            {"id":"li_02","organ":"li","diff":"中","q":"俗稱的『盲腸炎』臨床上通常是指位於腹腔右下方的哪一個退化構造發炎？","opts":["闌尾","膽囊","幽門","胰管"],"ans":0,"exp":"闌尾位在腹腔右下方盲腸末端，阻塞時容易引發急性闌尾炎（俗稱盲腸炎）。"},
+            {"id":"li_03","organ":"li","diff":"易","q":"病人強尼經常便秘，醫生建議他多攝取糙米與五穀雜糧，主要是因為含有何種物質能刺激腸道蠕動？","opts":["纖維素","蛋白質","維生素","脂質"],"ans":0,"exp":"人體無法消化纖維素，留在食物殘渣中的纖維素可增加糞便體積並刺激腸壁收縮蠕動。"},
+            {"id":"li_04","organ":"li","diff":"難","q":"一般吃壞肚子引發腹瀉（拉肚子），主要是因為消化管中哪一個部分水分吸收減少所致？","opts":["小腸","大腸","胃","食道"],"ans":0,"exp":"小腸是人體水分吸收的最主要部位，腸道發炎蠕動過快導致小腸吸水驟減而引發腹瀉。"},
+            {"id":"li_05","organ":"li","diff":"中","q":"食物未吸收的殘渣、腸壁剝落細胞與腸內細菌混合形成糞便排出體外，此過程稱為什麼？","opts":["排遺作用","排泄作用","過濾作用","分泌作用"],"ans":0,"exp":"重點考點：未經細胞利用的食物殘渣排出稱為『排遺』；代謝廢物（如尿液）排出才叫『排泄』。"},
+            {"id":"li_06","organ":"li","diff":"易","q":"【基礎】大腸本身是否具有分泌消化液分解大分子養分的功能？","opts":["否，大腸沒有消化腺","是，大腸能分泌弱鹼性消化液"],"ans":0,"exp":"大腸不具備消化腺，無法分泌任何消化酵素，因此沒有化學消化功能。"}
+        ];
+
+        async function loadExternalQuestions() {
+            try {
+                let res = await fetch('questions.json');
+                if (res.ok) {
+                    activeQuestionBank = await res.json();
+                } else {
+                    throw new Error("HTTP response error");
+                }
+            } catch (e) {
+                // 当通过本地 file:// 双击打开或跨域时，使用内嵌的 36 题完整题库
+                console.log("使用内嵌离线题库");
+                activeQuestionBank = fallbackFullQuestions;
+            }
+        }
+        loadExternalQuestions();
+
+        /* --- 遊戲核心變數 --- */
+        let gameMode = 'single';
+        let players = [];
+        let curPIdx = 0;
+        let isSoundOn = false;
+        let timerInterval = null;
+        let audioCtx = null;
+        const teamEmojis = ['🥦', '🥕', '🍆', '🌽'];
+        const teamColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12'];
+
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        function playTone(freq, duration) {
+            if (!isSoundOn) return;
+            initAudio();
+            try {
+                let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.start(); osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        function toggleSound() {
+            isSoundOn = !isSoundOn;
+            document.getElementById('sound-toggle').innerText = isSoundOn ? "🔊 音效開" : "🔇 靜音中";
+            if (isSoundOn) playTone(440, 0.2);
+        }
+
+        function setMode(mode) {
+            gameMode = mode;
+            document.getElementById('mode-single').classList.toggle('active', mode === 'single');
+            document.getElementById('mode-team').classList.toggle('active', mode === 'team');
+            document.getElementById('single-fields').style.display = mode === 'single' ? 'block' : 'none';
+            document.getElementById('team-fields').style.display = mode === 'team' ? 'block' : 'none';
+            if (mode === 'team') generateTeamInputs();
+        }
+
+        function generateTeamInputs() {
+            let cnt = parseInt(document.getElementById('team-count').value);
+            let box = document.getElementById('team-inputs');
+            box.innerHTML = '';
+            for (let i = 1; i <= cnt; i++) {
+                box.innerHTML += `<div style="margin-bottom:8px;"><input type="text" id="t-name-${i}" class="form-control" value="第 ${i} 組" placeholder="隊伍名稱"></div>`;
+            }
+        }
+
+        function startGame() {
+            players = [];
+            if (gameMode === 'single') {
+                let c = document.getElementById('p-class').value || "701";
+                let s = document.getElementById('p-seat').value || "01";
+                let n = document.getElementById('p-name').value || "同學";
+                players.push({ id: 1, name: `${n} (${c}-${s})`, pos: 1, score: 0, correct: 0, totalQ: 0, color: teamColors[0], emoji: teamEmojis[0] });
+            } else {
+                let cnt = parseInt(document.getElementById('team-count').value);
+                for (let i = 1; i <= cnt; i++) {
+                    let name = document.getElementById(`t-name-${i}`).value || `第 ${i} 組`;
+                    players.push({ id: i, name: name, pos: 1, score: 0, correct: 0, totalQ: 0, color: teamColors[i-1], emoji: teamEmojis[i-1] });
+                }
+            }
+
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+            initTokens();
+            updateUI();
+        }
+
+        function initTokens() {
+            let layer = document.getElementById('tokens-layer');
+            layer.innerHTML = '';
+            players.forEach(p => {
+                let t = document.createElement('div');
+                t.id = `token-${p.id}`; t.className = 'token';
+                t.style.backgroundColor = p.color; t.innerText = p.emoji;
+                layer.appendChild(t);
+                placeToken(p);
+            });
+        }
+
+        function placeToken(p) {
+            let mapElem = document.getElementById('game-map');
+            let rect = mapElem.getBoundingClientRect();
+            let c = (p.pos >= 55) ? endPos : (posMap[p.pos] || posMap[1]);
+            let token = document.getElementById(`token-${p.id}`);
+            if (!token) return;
+
+            let px = (c.x / 100) * rect.width;
+            let py = (c.y / 100) * rect.height;
+            let offset = (p.id - 1) * 6; // 多隊重疊錯開
+            token.style.left = `${px + offset}px`;
+            token.style.top = `${py + offset}px`;
+        }
+
+        function updateUI() {
+            let dash = document.getElementById('dashboard');
+            dash.innerHTML = '';
+            players.forEach((p, idx) => {
+                dash.innerHTML += `
+                    <div class="p-badge ${idx === curPIdx ? 'active' : ''}" style="border-left-color: ${p.color}">
+                        <div>${p.emoji} ${p.name}</div>
+                        <div style="color:#e67e22;">⚡ ${p.score} ATP (第 ${Math.min(54, p.pos)} 格)</div>
+                    </div>`;
+            });
+            let cur = players[curPIdx];
+            document.getElementById('turn-display').innerText = `輪到：${cur.emoji} ${cur.name}`;
+            document.getElementById('main-roll-btn').style.backgroundColor = cur.color;
+        }
+
+        function triggerDice() {
+            document.getElementById('main-roll-btn').disabled = true;
+            playTone(300, 0.1);
+            let dice = Math.floor(Math.random() * 4) + 1; // 1~4 點
+            let p = players[curPIdx];
+            let steps = 0;
+
+            let moveInterval = setInterval(() => {
+                if (steps < dice && p.pos < 55) {
+                    p.pos++; placeToken(p); playTone(500, 0.05); steps++;
+                } else {
+                    clearInterval(moveInterval);
+                    updateUI();
+                    handleCellEvent(p);
+                }
+            }, 250);
+        }
+
+        function handleCellEvent(p) {
+            // 抵達終點
+            if (p.pos >= 55) {
+                p.pos = 55; placeToken(p); p.score += 50;
+                playTone(600, 0.3);
+                showGameEndCertificate(p);
+                return;
+            }
+
+            // 1. 踩到圖面特殊事件格
+            if (specialCells[p.pos]) {
+                let spec = specialCells[p.pos];
+                p.score += spec.pts;
+                if (spec.step) p.pos += spec.step;
+                if (spec.targetPos) p.pos = spec.targetPos;
+                placeToken(p);
+                playTone(400, 0.2);
+
+                showDialog(spec.title, `${spec.desc}<br><b style="color:#e67e22; font-size:16px;">獲得 ${spec.pts} ATP！</b>`, () => {
+                    if (spec.extraRoll) {
+                        document.getElementById('main-roll-btn').disabled = false;
+                    } else {
+                        nextTurn();
+                    }
+                });
+                return;
+            }
+
+            // 2. 踩到空白格 -> 必問隨堂題 (依器官分區抽題)
+            let organ = 'oral';
+            if (p.pos <= 8) organ = (p.pos <= 3) ? 'oral' : 'esoph';
+            else if (p.pos <= 14) organ = 'stomach';
+            else if (p.pos <= 34) organ = 'si';
+            else organ = 'li';
+
+            // 抽取未考過的題目
+            let pool = activeQuestionBank.filter(q => q.organ === organ && !usedQuestions.has(q.id));
+            if (pool.length === 0) {
+                // 若全抽完則重置該區
+                activeQuestionBank.filter(q => q.organ === organ).forEach(q => usedQuestions.delete(q.id));
+                pool = activeQuestionBank.filter(q => q.organ === organ);
+            }
+
+            // 適性保護機制：連續答錯兩題以上優先抽「易」
+            if (consecutiveFails >= 2) {
+                let easyPool = pool.filter(q => q.diff === '易');
+                if (easyPool.length > 0) pool = easyPool;
+            }
+
+            let question = pool[Math.floor(Math.random() * pool.length)];
+            usedQuestions.add(question.id);
+            askQuestion(p, question);
+        }
+
+        function askQuestion(p, qData) {
+            p.totalQ++;
+            let modal = document.getElementById('game-modal');
+            modal.style.display = 'flex';
+            document.getElementById('m-title').innerText = `🔬 ${p.name} 隨堂考驗`;
+            document.getElementById('m-content').innerText = qData.q;
+            document.getElementById('m-explanation').style.display = 'none';
+            document.getElementById('m-ok-btn').style.display = 'none';
+
+            let optsBox = document.getElementById('m-opts');
+            optsBox.innerHTML = '';
+
+            let timerBox = document.getElementById('m-timer');
+            timerBox.style.display = 'block';
+            let timeLeft = 20;
+            timerBox.innerText = `⏳ 思考剩餘：${timeLeft} 秒`;
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerBox.innerText = `⏳ 思考剩餘：${timeLeft} 秒`;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    processAnswer(p, qData, -1);
+                }
+            }, 1000);
+
+            // 選項隨機打散防偷看
+            let indices = qData.opts.map((_, i) => i);
+            indices.sort(() => Math.random() - 0.5);
+
+            indices.forEach(origIdx => {
+                let btn = document.createElement('button');
+                btn.className = 'opt-btn';
+                btn.innerText = qData.opts[origIdx];
+                btn.onclick = () => {
+                    clearInterval(timerInterval);
+                    processAnswer(p, qData, origIdx);
+                };
+                optsBox.appendChild(btn);
+            });
+        }
+
+        function processAnswer(p, qData, userChoice) {
+            document.getElementById('m-timer').style.display = 'none';
+            document.getElementById('m-opts').innerHTML = '';
+            let expBox = document.getElementById('m-explanation');
+            expBox.style.display = 'block';
+
+            if (userChoice === qData.ans) {
+                p.score += 20; p.correct++; consecutiveFails = 0;
+                playTone(800, 0.2);
+                document.getElementById('m-content').innerHTML = `<span style="color:#27ae60; font-size:18px; font-weight:bold;">✅ 概念完全正確！+20 ATP</span>`;
+                expBox.innerHTML = `<b>【觀念解析】</b>${qData.exp}`;
+            } else {
+                p.score = Math.max(0, p.score - 5);
+                p.pos = Math.max(1, p.pos - 1); // 答錯倒退 1 格
+                placeToken(p);
+                consecutiveFails++;
+                playTone(200, 0.3);
+                let reason = userChoice === -1 ? "⏰ 時間到未作答！" : "❌ 觀念有小陷阱喔！-5 ATP";
+                document.getElementById('m-content').innerHTML = `<span style="color:#c0392b; font-size:16px; font-weight:bold;">${reason}</span><br>正確答案為：<b>${qData.opts[qData.ans]}</b>`;
+                expBox.innerHTML = `<b>【即時複習】</b>${qData.exp}`;
+            }
+            document.getElementById('m-ok-btn').style.display = 'block';
+        }
+
+        function showDialog(title, content, cb) {
+            let modal = document.getElementById('game-modal');
+            modal.style.display = 'flex';
+            document.getElementById('m-timer').style.display = 'none';
+            document.getElementById('m-title').innerText = title;
+            document.getElementById('m-content').innerHTML = content;
+            document.getElementById('m-opts').innerHTML = '';
+            document.getElementById('m-explanation').style.display = 'none';
+            let okBtn = document.getElementById('m-ok-btn');
+            okBtn.style.display = 'block';
+            okBtn.onclick = () => { closeModal(); if (cb) cb(); };
+        }
+
+        function closeModal() {
+            document.getElementById('game-modal').style.display = 'none';
+            nextTurn();
+        }
+
+        function nextTurn() {
+            curPIdx = (curPIdx + 1) % players.length;
+            document.getElementById('main-roll-btn').disabled = false;
+            updateUI();
+        }
+
+        function generateVerifyCode(p) {
+            let salt = "BIO701";
+            let raw = `${p.name}-${p.score}-${p.correct}-${salt}`;
+            let hash = 0;
+            for (let i = 0; i < raw.length; i++) {
+                hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0;
+            }
+            return "DG-" + Math.abs(hash).toString(16).toUpperCase().padStart(6, '0');
+        }
+
+        function showGameEndCertificate(winner) {
+            clearInterval(timerInterval);
+            let verifyCode = generateVerifyCode(winner);
+            let rate = winner.totalQ > 0 ? Math.round((winner.correct / winner.totalQ) * 100) : 100;
+
+            let certHtml = `
+                <div class="certificate-card">
+                    <h2 style="color:#27ae60; margin:0 0 6px 0;">🎉 消化道冒險完賽證明</h2>
+                    <p style="font-size:13px; color:#7f8c8d; margin:0;">成功抵達終點，完成【排遺作用】將殘渣排出！</p>
+                    <hr style="border:none; border-top:1px dashed #ccc; margin:10px 0;">
+                    <div style="text-align:left; font-size:15px; line-height:1.8;">
+                        <div>👤 <b>參賽者：</b> ${winner.name}</div>
+                        <div>⚡ <b>能量積分：</b> <span style="color:#e67e22; font-weight:bold; font-size:18px;">${winner.score} ATP</span></div>
+                        <div>🎯 <b>觀念正確率：</b> ${rate}% (${winner.correct}/${winner.totalQ}題)</div>
+                        <div>📅 <b>完成時間：</b> ${new Date().toLocaleTimeString()}</div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <div style="font-size:12px; color:#95a5a6;">Classroom 防偽驗證代碼：</div>
+                        <div class="cert-code">${verifyCode}</div>
+                    </div>
+                    <p style="color:#c0392b; font-size:13px; font-weight:bold; margin-top:12px;">📸 請直接在 iPad 上截圖，上傳至 Google Classroom 繳交！</p>
+                </div>
+            `;
+            let modal = document.getElementById('game-modal');
+            modal.style.display = 'flex';
+            document.getElementById('m-timer').style.display = 'none';
+            document.getElementById('m-title').innerText = "🏆 任務達成！";
+            document.getElementById('m-content').innerHTML = certHtml;
+            document.getElementById('m-opts').innerHTML = '';
+            document.getElementById('m-explanation').style.display = 'none';
+            document.getElementById('m-ok-btn').style.display = 'none';
+        }
+
+        window.addEventListener('resize', () => {
+            if (players.length > 0) players.forEach(placeToken);
+        });
+    </script>
+</body>
+</html>
