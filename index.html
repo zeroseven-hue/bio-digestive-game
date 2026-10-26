@@ -36,10 +36,10 @@
             padding: 4px 10px; font-size: 13px; cursor: pointer;
         }
 
-        /* 首頁設定介面 */
+        /* 首頁設定介面 (已由 BioGameSuite 接管，預設隱藏杜絕開局閃爍) */
         #setup-screen {
             position: fixed; inset: 0; background: var(--bg-c);
-            display: flex; justify-content: center; align-items: center;
+            display: none !important; justify-content: center; align-items: center;
             z-index: 1000; padding: 15px; overflow-y: auto;
         }
         .card {
@@ -158,8 +158,8 @@
         <button id="sound-toggle" class="sound-btn" onclick="toggleSound()">🔇 靜音中</button>
     </div>
 
-    <!-- 首頁設定介面 -->
-    <div id="setup-screen">
+    <!-- 首頁設定介面 (已由 BioGameSuite 接管，永久隱藏避免畫面閃爍) -->
+    <div id="setup-screen" style="display: none !important;">
         <div class="card">
             <h2>消化大富翁</h2>
             <div class="form-group">
@@ -371,20 +371,23 @@
 
         function startGame() {
             players = [];
+            const bgsStudent = (window.BioGameSuite && window.BioGameSuite.getStudent) ? window.BioGameSuite.getStudent() : null;
+
             if (gameMode === 'single') {
-                let c = document.getElementById('p-class').value || "701";
-                let s = document.getElementById('p-seat').value || "01";
-                let n = (document.getElementById('p-name').value || "").trim();
+                let c = (bgsStudent && bgsStudent.class) || document.getElementById('p-class')?.value || "701";
+                let s = (bgsStudent && bgsStudent.seat) || document.getElementById('p-seat')?.value || "01";
+                let n = (bgsStudent && bgsStudent.name) || (document.getElementById('p-name')?.value || "").trim();
 
-                if (!n) {
-                    alert('⚠️ 請務必填寫學生真實全名，不可留空！');
-                    document.getElementById('p-name').focus();
-                    return;
+                // 若未經由 BioGameSuite 認證，才執行原生表單檢核與原生 confirm
+                if (!bgsStudent || !bgsStudent.name) {
+                    if (!n) {
+                        alert('⚠️ 請務必填寫學生真實全名，不可留空！');
+                        document.getElementById('p-name')?.focus();
+                        return;
+                    }
+                    const confirmText = `🎯 請核對您的挑戰身分：\n\n【${c} 班級　${s} 座號】${n}\n\n📱【課堂載具使用誠信公約】\n⚠️ 挑戰全程請專注作答！\n👉 嚴禁跳出畫面看 YouTube、拍照自拍、或開啟非課堂 App。\n👉 若發現違規使用載具，本次作答成績將直接不予計分！\n\n您已確認身分無誤，並保證遵守公約嗎？`;
+                    if (!confirm(confirmText)) return;
                 }
-
-                // 🎯 身分二次核對 ＋ 課堂載具使用誠信公約
-                const confirmText = `🎯 請核對您的挑戰身分：\n\n【${c} 班級　${s} 座號】${n}\n\n📱【課堂載具使用誠信公約】\n⚠️ 挑戰全程請專注作答！\n👉 嚴禁跳出畫面看 YouTube、拍照自拍、或開啟非課堂 App。\n👉 若發現違規使用載具，本次作答成績將直接不予計分！\n\n您已確認身分無誤，並保證遵守公約嗎？`;
-                if (!confirm(confirmText)) return;
 
                 window.playerProfile = { cls: c, seat: s, name: n };
                 players.push({ id: 1, name: `${n} (${c}-${s})`, pos: 1, score: 0, correct: 0, totalQ: 0, color: teamColors[0], emoji: teamEmojis[0] });
@@ -684,6 +687,6 @@
             if (players.length > 0) players.forEach(placeToken);
         });
     </script>
-    <script src="score-submit-modal.js?v=3.9"></script>
+    <script src="score-submit-modal.js?v=4.0"></script>
 </body>
 </html>
