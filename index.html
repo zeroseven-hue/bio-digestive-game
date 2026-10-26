@@ -172,15 +172,15 @@
 
             <div id="single-fields">
                 <div class="form-group">
-                    <label>班級 / 座號：</label>
+                    <label>班級 (701~710) / 座號 (01~35)：</label>
                     <div style="display: flex; gap: 8px;">
-                        <input type="text" id="p-class" class="form-control" placeholder="如 701" value="701">
-                        <input type="number" id="p-seat" class="form-control" placeholder="座號" value="1">
+                        <select id="p-class" class="form-control" style="flex: 1;"><option value="701">701</option><option value="702">702</option><option value="703">703</option><option value="704">704</option><option value="705">705</option><option value="706">706</option><option value="707">707</option><option value="708">708</option><option value="709">709</option><option value="710">710</option></select>
+                        <select id="p-seat" class="form-control" style="flex: 1;"><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option><option value="32">32</option><option value="33">33</option><option value="34">34</option><option value="35">35</option></select>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>姓名：</label>
-                    <input type="text" id="p-name" class="form-control" placeholder="請輸入姓名" value="小明">
+                    <label>學生真實全名 (必填)：</label>
+                    <input type="text" id="p-name" class="form-control" placeholder="請輸入真實全名 (如：王小明)" maxlength="15" required>
                 </div>
             </div>
 
@@ -374,7 +374,19 @@
             if (gameMode === 'single') {
                 let c = document.getElementById('p-class').value || "701";
                 let s = document.getElementById('p-seat').value || "01";
-                let n = document.getElementById('p-name').value || "同學";
+                let n = (document.getElementById('p-name').value || "").trim();
+
+                if (!n) {
+                    alert('⚠️ 請務必填寫學生真實全名，不可留空！');
+                    document.getElementById('p-name').focus();
+                    return;
+                }
+
+                // 🎯 身分二次核對 ＋ 課堂載具使用誠信公約
+                const confirmText = `🎯 請核對您的挑戰身分：\n\n【${c} 班級　${s} 座號】${n}\n\n📱【課堂載具使用誠信公約】\n⚠️ 挑戰全程請專注作答！\n👉 嚴禁跳出畫面看 YouTube、拍照自拍、或開啟非課堂 App。\n👉 若發現違規使用載具，本次作答成績將直接不予計分！\n\n您已確認身分無誤，並保證遵守公約嗎？`;
+                if (!confirm(confirmText)) return;
+
+                window.playerProfile = { cls: c, seat: s, name: n };
                 players.push({ id: 1, name: `${n} (${c}-${s})`, pos: 1, score: 0, correct: 0, totalQ: 0, color: teamColors[0], emoji: teamEmojis[0] });
             } else {
                 let cnt = parseInt(document.getElementById('team-count').value);
@@ -624,7 +636,10 @@
                         <div style="font-size:12px; color:#95a5a6;">Classroom 防偽驗證代碼：</div>
                         <div class="cert-code">${verifyCode}</div>
                     </div>
-                    <p style="color:#c0392b; font-size:13px; font-weight:bold; margin-top:12px;">📸 請直接在 iPad 上截圖，上傳至 Google Classroom 繳交！</p>
+                    <div style="margin-top:14px; display:flex; flex-direction:column; gap:8px;">
+                        <button onclick="submitDigestiveScore(${winner.score}, '${winner.name}')" style="background:linear-gradient(135deg, #16a34a, #15803d); color:white; border:none; padding:12px; border-radius:12px; font-weight:800; font-size:15px; cursor:pointer; box-shadow:0 4px 12px rgba(22,163,74,0.3);">🚀 送出成績至試算表 (優先推薦)</button>
+                        <button onclick="copyDigestiveScore(${winner.score}, '${winner.name}', '${verifyCode}')" style="background:#334155; color:#cbd5e1; border:1px solid #475569; padding:10px; border-radius:12px; font-size:13px; font-weight:600; cursor:pointer;">📋 複製成績文字檔 (斷網備用)</button>
+                    </div>
                 </div>
             `;
             let modal = document.getElementById('game-modal');
@@ -637,9 +652,38 @@
             document.getElementById('m-ok-btn').style.display = 'none';
         }
 
+        function submitDigestiveScore(score, name) {
+            if (typeof showScoreSubmitModal === 'function') {
+                const c = document.getElementById('p-class')?.value || window.playerProfile?.cls || '701';
+                const s = document.getElementById('p-seat')?.value || window.playerProfile?.seat || '01';
+                const n = (document.getElementById('p-name')?.value || window.playerProfile?.name || name || '同學').trim();
+                showScoreSubmitModal({
+                    gameTitle: '人體消化大冒險 (54格地圖)',
+                    class: c,
+                    seat: s,
+                    name: n,
+                    score: score,
+                    scoreDisplay: `${score} ATP`,
+                    duration: '完成排遺抵達終點'
+                });
+            } else {
+                alert('成績登錄組件載入中，請點擊「複製成績文字檔」備用！');
+            }
+        }
+
+        function copyDigestiveScore(score, name, code) {
+            const text = `🏆 【人體消化大冒險】防偽成績單\n👤 參賽者：${name}\n⚡ 能量積分：${score} ATP\n🔑 防偽代碼：${code}\n📅 時間：${new Date().toLocaleString('zh-TW')}`;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ 已複製成績備份至剪貼簿！');
+            }).catch(() => {
+                prompt('請複製以下成績：', text);
+            });
+        }
+
         window.addEventListener('resize', () => {
             if (players.length > 0) players.forEach(placeToken);
         });
     </script>
+    <script src="score-submit-modal.js?v=3.6"></script>
 </body>
 </html>
