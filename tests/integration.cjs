@@ -1,0 +1,15 @@
+const vm=require('vm'),fs=require('fs'),assert=require('assert/strict'),path=require('path');
+const root=path.resolve(__dirname,'..'),C=require('../core.js'),bank=require('../questions.json');
+const els={},storage=new Map();let submitted=null;
+const node=()=>({value:'',style:{},innerHTML:'',textContent:'',hidden:false,querySelectorAll(){return[]},focus(){},setAttribute(){},classList:{toggle(){},contains(){return false}}});
+const ctx={window:{DigestiveCore:C,DIGESTIVE_QUESTIONS:bank,MAP_POSITIONS:{1:{x:23,y:7}},addEventListener(){},scrollTo(){},showScoreSubmitModal(o){submitted=o}},document:{getElementById:id=>els[id]??=node(),addEventListener(){},documentElement:{classList:{}}},performance:{now:()=>0},location:{protocol:'file:'},confirm:()=>true,localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},setInterval(){},setTimeout(){},clearTimeout(){},console};
+vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'game.js'),'utf8'),ctx);
+for(const [id,value]of Object.entries({'player-name':'測試學生','class-name':'703',seat:'09',pace:'quick',seconds:'0',rounds:'8',rule:'rounds'}))ctx.document.getElementById(id).value=value;
+els.settings.onsubmit({preventDefault(){}});
+assert.equal(vm.runInContext('state.profile.cls',ctx),'703');assert.equal(vm.runInContext('state.profile.seat',ctx),'09');
+vm.runInContext("state.phase='ended';state.completedAt=new Date().toISOString();state.players[0].learning=80;state.players[0].total=5;state.players[0].correct=4;submitScore();",ctx);
+assert.equal(submitted.class,'703');assert.equal(submitted.seat,'09');assert.equal(submitted.name,'測試學生');assert.equal(submitted.score,80);assert.equal(submitted.accuracy,'80%');assert.ok(submitted.submissionId);
+vm.runInContext('state=C.restore(JSON.stringify(state));submitScore()',ctx);assert.equal(submitted.seat,'09');
+submitted.onReset();assert.equal(vm.runInContext('state',ctx),null);assert.equal(storage.has('digestive_adventure_v2'),false);
+vm.runInContext("setMode('team')",ctx);assert.equal(els['player-name'].disabled,true);
+console.log('PASS 個人身分保存、續玩提交參數、學習分與正確率、交機清除、小組必填隔離（未連線正式試算表）');
