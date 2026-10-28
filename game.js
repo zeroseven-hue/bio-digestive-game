@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 const C = window.DigestiveCore, $ = id => document.getElementById(id), KEY = 'digestive_adventure_v2';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let state = null, mode = 'single', bank = window.DIGESTIVE_QUESTIONS, saved = null, sound = false, audio = null, tickAt = 0, pauseFocus = null;
@@ -403,7 +403,7 @@ function renderResults() {
     `;
   }).join('') + `
     <div class="actions">
-      ${state.config.mode === 'single' && state.profile ? '<button id="submit-score" class="primary" style="flex:2;">🚀 送出個人成績至教師試算表 (優先推薦)</button>' : ''}
+      ${state.config.mode === 'single' && state.profile ? '<button id="submit-score" class="primary" style="flex:2;">🚀 查看結算與交卷檢核</button>' : '}
       <button id="download" class="secondary">📥 下載學習紀錄 (JSON)</button>
       <button id="copy-score" class="secondary">📋 複製成績文字 (斷網備用)</button>
       <button id="print" class="secondary">🖨️ 列印證書 / 存 PDF</button>
