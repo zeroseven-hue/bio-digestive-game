@@ -403,7 +403,7 @@ function renderResults() {
     `;
   }).join('') + `
     <div class="actions">
-      ${state.config.mode === 'single' && state.profile ? '<button id="submit-score" class="primary" style="flex:2;">🚀 查看結算與交卷檢核</button>' : '}
+      ${state.config.mode === 'single' && state.profile ? '<button id="submit-score" class="primary" style="flex:2;">🚀 查看結算與交卷檢核</button>' : ''}
       <button id="download" class="secondary">📥 下載學習紀錄 (JSON)</button>
       <button id="copy-score" class="secondary">📋 複製成績文字 (斷網備用)</button>
       <button id="print" class="secondary">🖨️ 列印證書 / 存 PDF</button>
