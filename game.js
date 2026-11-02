@@ -679,7 +679,7 @@ setInterval(() => {
 teamInputs();
 
 // 初始化班級座號
-if ($('class-name')) $('class-name').innerHTML = Array.from({ length: 10 }, (_, i) => `<option>${701 + i}</option>`).join('');
+if ($('class-name')) $('class-name').innerHTML = Array.from({ length: 11 }, (_, i) => `<option>${701 + i}</option>`).join('');
 if ($('seat')) $('seat').innerHTML = Array.from({ length: 35 }, (_, i) => `<option>${String(i + 1).padStart(2, '0')}</option>`).join('');
 
 try {

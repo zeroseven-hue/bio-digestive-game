@@ -11,7 +11,7 @@
  * 
  * 四大核心防線：
  * 1. 【一、開局登入介面絕對統一】：
- *    - 班級：純數字 701~710 下拉選單（嚴禁出現「班」字）
+ *    - 班級：純數字 701~711 下拉選單（嚴禁出現「班」字）
  *    - 座號：兩位純數字補零 01~35 下拉選單（嚴禁出現「號」字）
  *    - 姓名：真實全名必填，灰色提示「請輸入真實全名，請勿填寫暱稱」
  *    - 單元：大廳一顯示單元（支援派卷鎖定）；大廳二獨立遊戲自動隱藏單元
@@ -1099,7 +1099,7 @@
     overlay.id = 'bgsLoginOverlay';
 
     const savedClass = localStorage.getItem('bgs_last_class') || '701';
-    const classOpts = Array.from({ length: 10 }, (_, i) => {
+    const classOpts = Array.from({ length: 11 }, (_, i) => {
       const c = `7${String(i + 1).padStart(2, '0')}`;
       return `<option value="${c}" ${c === savedClass ? 'selected' : ''}>${c}</option>`;
     }).join('');
@@ -1121,7 +1121,7 @@
 
         <div class="bgs-row">
           <div class="bgs-form-group">
-            <label class="bgs-label">班級 (701~710)</label>
+            <label class="bgs-label">班級 (701~711)</label>
             <select class="bgs-select" id="bgsClassSelect">${classOpts}</select>
           </div>
           <div class="bgs-form-group">
@@ -1407,7 +1407,7 @@
 
         <div class="bgs-row">
           <div class="bgs-form-group">
-            <label class="bgs-label">班級 (701~710)</label>
+            <label class="bgs-label">班級 (701~711)</label>
             <select class="bgs-select" id="bgsQuickClass">${classOpts}</select>
           </div>
           <div class="bgs-form-group">
